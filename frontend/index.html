@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Harry Potter — Polyglot DB</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="logo">⚡ HP Polyglot</span>
+  <button data-section="sec-personajes">Personajes</button>
+  <button data-section="sec-casas">Casas</button>
+  <button data-section="sec-hechizos">Hechizos</button>
+  <button data-section="sec-eventos">Eventos</button>
+  <button data-section="sec-peliculas">Películas/Libros</button>
+  <button data-section="sec-objetos">Objetos</button>
+  <button data-section="sec-rankings">Rankings</button>
+  <button data-section="sec-actividad">Mi Actividad</button>
+  <button data-section="sec-busqueda">Buscar</button>
+  <button data-section="sec-admin" id="btn-admin-section" class="admin-nav" style="display:none">Administrar</button>
+  <div id="user-bar">Hola, <span id="user-name"></span></div>
+  <button id="btn-login-nav">Iniciar sesión</button>
+</nav>
+
+<main>
+
+  <!-- PERSONAJES -->
+  <section id="sec-personajes" class="section">
+    <h2>Personajes <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div class="search-bar">
+      <input id="search-personajes" type="text" placeholder="Buscar personaje…"/>
+    </div>
+    <div id="personajes-grid" class="grid"></div>
+    <div id="personaje-detail" style="display:none"></div>
+  </section>
+
+  <!-- CASAS -->
+  <section id="sec-casas" class="section">
+    <h2>Casas de Hogwarts <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div id="casas-grid" class="grid"></div>
+  </section>
+
+  <!-- HECHIZOS -->
+  <section id="sec-hechizos" class="section">
+    <h2>Hechizos <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div class="search-bar">
+      <input id="search-hechizos" type="text" placeholder="Buscar hechizo o efecto…"/>
+    </div>
+    <div id="hechizos-grid" class="grid"></div>
+  </section>
+
+  <!-- EVENTOS -->
+  <section id="sec-eventos" class="section">
+    <h2>Eventos Históricos <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div id="eventos-table"></div>
+  </section>
+
+  <!-- PELICULAS -->
+  <section id="sec-peliculas" class="section">
+    <h2>Películas y Libros <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div id="peliculas-grid" class="grid"></div>
+  </section>
+
+  <!-- OBJETOS -->
+  <section id="sec-objetos" class="section">
+    <h2>Objetos Mágicos <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div id="objetos-grid" class="grid"></div>
+  </section>
+
+  <!-- RANKINGS -->
+  <section id="sec-rankings" class="section">
+    <h2>Rankings de Contenido <span class="db-badge badge-redis">Redis</span></h2>
+    <h3 style="color:var(--gold-lt);margin:.5rem 0 .8rem;font-size:1rem">Top global — hoy</h3>
+    <div id="rankings-global"></div>
+    <h3 style="color:var(--gold-lt);margin:1.5rem 0 .8rem;font-size:1rem">Tu ranking personal</h3>
+    <div id="rankings-usuario"><p class="spinner">Iniciá sesión para ver tu ranking.</p></div>
+  </section>
+
+  <!-- ACTIVIDAD -->
+  <section id="sec-actividad" class="section">
+    <h2>Mi Actividad <span class="db-badge badge-cassandra">Cassandra</span></h2>
+    <div class="search-bar">
+      <input id="input-fecha" type="date"/>
+      <button class="btn btn-outline" id="btn-filter-fecha">Filtrar por fecha</button>
+    </div>
+    <div id="actividad-content"></div>
+    <h3 class="subheading">Mis búsquedas</h3>
+    <div id="busquedas-content"></div>
+  </section>
+
+  <!-- BUSQUEDA GLOBAL -->
+  <section id="sec-busqueda" class="section">
+    <h2>Búsqueda global <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div class="search-bar">
+      <input id="search-global" type="text" placeholder="Buscar en todo el universo..."/>
+      <button class="btn" id="btn-search-global">Buscar</button>
+    </div>
+    <div id="global-results" class="grid"></div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="sec-admin" class="section">
+    <h2>Panel de administración</h2>
+    <p class="helper">Desde aquí podés mantener la información del sitio sin conocimientos técnicos.</p>
+    <div class="admin-tabs">
+      <button class="btn admin-tab active" data-admin-view="admin-content">Contenido</button>
+      <button class="btn btn-outline admin-tab" data-admin-view="admin-relations">Relaciones</button>
+      <button class="btn btn-outline admin-tab" data-admin-view="admin-users">Usuarios y roles</button>
+    </div>
+
+    <div id="admin-content" class="admin-view active">
+      <div class="admin-toolbar">
+        <label for="admin-category">¿Qué querés administrar?</label>
+        <select id="admin-category">
+          <option value="personajes">Personajes</option><option value="casas">Casas</option>
+          <option value="hechizos">Hechizos</option><option value="eventos">Eventos</option>
+          <option value="peliculas">Películas y libros</option><option value="objetos">Objetos mágicos</option>
+        </select>
+        <button class="btn" id="admin-new-item">Agregar nuevo</button>
+      </div>
+      <div class="admin-grid">
+        <div class="admin-box">
+          <h3 id="admin-form-title">Agregar personaje</h3>
+          <form id="admin-friendly-form"></form>
+          <div class="modal-actions">
+            <button class="btn" id="admin-save-item">Guardar</button>
+            <button class="btn btn-outline" id="admin-cancel-edit">Cancelar</button>
+          </div>
+        </div>
+        <div class="admin-box">
+          <h3>Contenido existente</h3>
+          <div id="admin-items-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-relations" class="admin-view">
+      <div class="admin-grid">
+        <div class="admin-box">
+          <h3>Relacionar personaje con evento</h3>
+          <label>Personaje</label><select id="relation-event-character"></select>
+          <label>Evento</label><select id="relation-event-target"></select>
+          <label>Participación en el evento</label>
+          <input id="relation-event-role" placeholder="Ejemplo: participante, testigo, organizador"/>
+          <div class="modal-actions">
+            <button class="btn" id="relation-event-add">Agregar relación</button>
+            <button class="btn btn-danger" id="relation-event-remove">Quitar relación</button>
+          </div>
+        </div>
+        <div class="admin-box">
+          <h3>Relacionar personaje con película o libro</h3>
+          <label>Personaje</label><select id="relation-movie-character"></select>
+          <label>Película o libro</label><select id="relation-movie-target"></select>
+          <div class="modal-actions">
+            <button class="btn" id="relation-movie-add">Agregar relación</button>
+            <button class="btn btn-danger" id="relation-movie-remove">Quitar relación</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-users" class="admin-view">
+      <div class="admin-grid">
+        <div class="admin-box">
+          <h3>Usuarios registrados</h3>
+          <div id="admin-users-list"></div>
+        </div>
+        <div class="admin-box">
+          <h3>Tipos de usuario</h3>
+          <form id="role-friendly-form">
+            <input type="hidden" id="role-edit-id"/>
+            <label>Nombre</label><input id="role-name" required placeholder="Ejemplo: Moderador"/>
+            <label>Descripción</label><input id="role-description" placeholder="¿Qué permisos representa?"/>
+          </form>
+          <div class="modal-actions">
+            <button class="btn" id="role-save">Guardar tipo</button>
+            <button class="btn btn-outline" id="role-clear">Nuevo</button>
+          </div>
+          <div id="admin-roles-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-tabs">
+      <div class="modal-tab active" data-tab="login">Iniciar sesión</div>
+      <div class="modal-tab"        data-tab="register">Registrarse</div>
+    </div>
+    <p id="modal-error"></p>
+
+    <!-- Login -->
+    <div id="tab-login">
+      <form id="form-login">
+        <input id="login-email"    type="email"    placeholder="Email"      required/>
+        <input id="login-password" type="password" placeholder="Contraseña" required/>
+        <div class="modal-actions">
+          <button type="submit" class="btn">Entrar</button>
+          <button type="button" class="btn btn-outline" id="close-modal">Cancelar</button>
+        </div>
+      </form>
+      <p style="margin-top:.8rem;font-size:.78rem;color:var(--muted)">
+        Demo: harry@hogwarts.com / expecto123
+      </p>
+    </div>
+
+    <!-- Register -->
+    <div id="tab-register" style="display:none">
+      <form id="form-register">
+        <input id="reg-nombre"   type="text"     placeholder="Nombre completo" required/>
+        <input id="reg-email"    type="email"    placeholder="Email"           required/>
+        <input id="reg-password" type="password" placeholder="Contraseña"      required/>
+        <div class="modal-actions">
+          <button type="submit" class="btn">Registrarse</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/app.js?v=4"></script>
+</body>
+</html>
