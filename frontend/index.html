@@ -34,13 +34,15 @@
       <input id="search-personajes" type="text" placeholder="Buscar personaje…"/>
     </div>
     <div id="personajes-grid" class="grid"></div>
-    <div id="personaje-detail" style="display:none"></div>
+    <div id="personajes-pagination" class="pagination"></div>
   </section>
 
   <!-- CASAS -->
   <section id="sec-casas" class="section">
     <h2>Casas de Hogwarts <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div class="search-bar"><input id="search-casas" type="text" placeholder="Buscar por nombre, fundador, mascota o valor…"/></div>
     <div id="casas-grid" class="grid"></div>
+    <div id="casas-pagination" class="pagination"></div>
   </section>
 
   <!-- HECHIZOS -->
@@ -50,24 +52,31 @@
       <input id="search-hechizos" type="text" placeholder="Buscar hechizo o efecto…"/>
     </div>
     <div id="hechizos-grid" class="grid"></div>
+    <div id="hechizos-pagination" class="pagination"></div>
   </section>
 
   <!-- EVENTOS -->
   <section id="sec-eventos" class="section">
     <h2>Eventos Históricos <span class="db-badge badge-mongo">MongoDB</span></h2>
-    <div id="eventos-table"></div>
+    <div class="search-bar"><input id="search-eventos" type="text" placeholder="Buscar evento, descripción o participante…"/></div>
+    <div id="eventos-grid" class="grid"></div>
+    <div id="eventos-pagination" class="pagination"></div>
   </section>
 
   <!-- PELICULAS -->
   <section id="sec-peliculas" class="section">
     <h2>Películas y Libros <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div class="search-bar"><input id="search-peliculas" type="text" placeholder="Buscar título, tipo, descripción, personaje o evento…"/></div>
     <div id="peliculas-grid" class="grid"></div>
+    <div id="peliculas-pagination" class="pagination"></div>
   </section>
 
   <!-- OBJETOS -->
   <section id="sec-objetos" class="section">
     <h2>Objetos Mágicos <span class="db-badge badge-mongo">MongoDB</span></h2>
+    <div class="search-bar"><input id="search-objetos" type="text" placeholder="Buscar nombre, descripción o tipo…"/></div>
     <div id="objetos-grid" class="grid"></div>
+    <div id="objetos-pagination" class="pagination"></div>
   </section>
 
   <!-- RANKINGS -->
@@ -159,6 +168,15 @@
             <button class="btn btn-danger" id="relation-movie-remove">Quitar relación</button>
           </div>
         </div>
+        <div class="admin-box">
+          <h3>Relacionar película o libro con evento</h3>
+          <label>Película o libro</label><select id="relation-work-target"></select>
+          <label>Evento</label><select id="relation-work-event"></select>
+          <div class="modal-actions">
+            <button class="btn" id="relation-work-add">Agregar relación</button>
+            <button class="btn btn-danger" id="relation-work-remove">Quitar relación</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -186,6 +204,13 @@
   </section>
 
 </main>
+
+<div id="detail-modal" class="modal-overlay">
+  <div class="modal detail-modal">
+    <button class="detail-close" id="detail-close" aria-label="Cerrar">×</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
 
 <!-- AUTH MODAL -->
 <div id="auth-modal" class="modal-overlay">
@@ -227,6 +252,6 @@
 
 <div id="toast"></div>
 
-<script src="js/app.js?v=4"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>

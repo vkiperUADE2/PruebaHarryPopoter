@@ -212,6 +212,12 @@ tr:hover td { background: #1e1e35; }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1.5rem; }
 .detail-grid label { font-size: .75rem; color: var(--muted); }
 .detail-grid span  { font-size: .9rem; }
+.detail-modal { width: 680px; max-height: 88vh; overflow-y: auto; position: relative; }
+.detail-close { position: absolute; top: .6rem; right: .8rem; background: none; border: 0; color: var(--gold); font-size: 1.8rem; cursor: pointer; }
+.detail-modal p { color: var(--muted); line-height: 1.55; margin: .7rem 0; }
+.detail-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+.detail-list strong { width: 100%; color: var(--gold-lt); }
+.detail-list span { background: var(--border); color: var(--text); border-radius: 4px; padding: .3rem .55rem; font-size: .8rem; }
 
 /* RANKING */
 .rank-item {
@@ -223,6 +229,12 @@ tr:hover td { background: #1e1e35; }
 }
 .rank-num { color: var(--gold); font-weight: 700; min-width: 28px; font-size: 1.1rem; }
 .rank-score { margin-left: auto; color: var(--muted); font-size: .82rem; }
+.rank-item small { display: block; color: var(--muted); font-size: .7rem; margin-top: .15rem; }
+.clickable { cursor: pointer; }
+.clickable:hover { background: #1e1e35; }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 1.2rem 0; color: var(--muted); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
 
 /* USER BAR */
 #user-bar {

@@ -79,3 +79,8 @@ class AsociacionEventoIn(BaseModel):
 class AsociacionPeliculaIn(BaseModel):
     personaje_id: str
     pelicula_id: str
+
+
+class AsociacionPeliculaEventoIn(BaseModel):
+    pelicula_id: str
+    evento_id: str

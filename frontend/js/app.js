@@ -122,123 +122,83 @@ function showSection(id) {
   if (loaders[id]) loaders[id]();
 }
 
-// ── personajes ────────────────────────────────────────────────────────────────
+// ── contenido, detalles y paginación ─────────────────────────────────────────
 
-async function loadPersonajes(q = "") {
-  spin("personajes-grid");
+const PAGE_SIZE = 6;
+const pageState = Object.fromEntries(
+  ["personajes", "casas", "hechizos", "eventos", "peliculas", "objetos"].map(t => [t, { page: 1, q: "" }])
+);
+
+const contentConfig = {
+  personajes: { title: x => x.nombre, text: x => `${x.rol || ""} · ${x.alineacion || ""}`, tag: x => x.casa?.nombre || "Sin casa" },
+  casas: { title: x => x.nombre, text: x => `Fundador: ${x.fundador}`, tag: x => x.mascota },
+  hechizos: { title: x => x.nombre, text: x => x.descripcion, tag: x => x.efecto },
+  eventos: { title: x => x.nombre, text: x => x.descripcion, tag: x => x.fecha?.split("T")[0] || "Sin fecha" },
+  peliculas: { title: x => x.titulo, text: x => x.descripcion, tag: x => `${x.tipo} · ${x.anio_lanzamiento}` },
+  objetos: { title: x => x.nombre, text: x => x.descripcion, tag: x => x.tipo },
+};
+
+async function loadCategory(type, q = pageState[type].q, page = pageState[type].page) {
+  pageState[type] = { q, page };
+  const grid = document.getElementById(`${type}-grid`);
+  spin(`${type}-grid`);
   try {
-    const path = q ? `/universo/personajes/buscar?q=${encodeURIComponent(q)}` : "/universo/personajes";
-    const data  = await api(path);
-    const grid  = document.getElementById("personajes-grid");
-    if (!data.length) { grid.innerHTML = '<p class="spinner">Sin resultados</p>'; return; }
-    grid.innerHTML = data.map(p => `
-      <div class="card" onclick="showPersonaje('${p._id}')">
-        <h3>${p.nombre}</h3>
-        <p>${p.rol || ""} · ${p.alineacion || ""}</p>
-        <span class="tag">${p.casa?.nombre || "Sin casa"}</span>
-      </div>`).join("");
-  } catch (e) { document.getElementById("personajes-grid").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
+    const skip = (page - 1) * PAGE_SIZE;
+    const base = q ? `/universo/${type}/buscar?q=${encodeURIComponent(q)}&` : `/universo/${type}?`;
+    const [rows, count] = await Promise.all([
+      api(`${base}skip=${skip}&limit=${PAGE_SIZE}`),
+      api(`/universo/${type}/cantidad${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+    ]);
+    const cfg = contentConfig[type];
+    grid.innerHTML = rows.length ? rows.map(item => `
+      <div class="card" onclick="showDetail('${type}', '${item._id}')">
+        <h3>${cfg.title(item)}</h3><p>${cfg.text(item)}</p><span class="tag">${cfg.tag(item)}</span>
+      </div>`).join("") : '<p class="spinner">Sin resultados</p>';
+    renderPagination(type, count.cantidad);
+  } catch (e) {
+    grid.innerHTML = `<p class="spinner">Error: ${e.message}</p>`;
+  }
 }
 
-async function showPersonaje(id) {
-  const p = await api(`/universo/personajes/${id}`).catch(e => { toast(e.message); return null; });
-  if (!p) return;
-  const panel = document.getElementById("personaje-detail");
-  panel.style.display = "block";
-  panel.innerHTML = `
-    <div class="detail-panel">
-      <h3>${p.nombre}</h3>
-      <div class="detail-grid">
-        <div><label>Rol</label><br><span>${p.rol || "-"}</span></div>
-        <div><label>Alineación</label><br><span>${p.alineacion || "-"}</span></div>
-        <div><label>Casa</label><br><span>${p.casa?.nombre || "-"}</span></div>
-        <div><label>Nacimiento</label><br><span>${p.fecha_nacimiento ? p.fecha_nacimiento.split("T")[0] : "-"}</span></div>
-      </div>
-      ${p.hechizos?.length ? `<p style="margin-top:1rem;font-size:.82rem;color:var(--muted)">Hechizos: ${p.hechizos.map(h=>h.nombre).join(", ")}</p>` : ""}
-    </div>`;
+function renderPagination(type, total) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const el = document.getElementById(`${type}-pagination`);
+  if (pages <= 1) { el.innerHTML = ""; return; }
+  el.innerHTML = `<button class="btn btn-outline" ${pageState[type].page === 1 ? "disabled" : ""} onclick="changePage('${type}', -1)">Anterior</button>
+    <span>Página ${pageState[type].page} de ${pages}</span>
+    <button class="btn btn-outline" ${pageState[type].page === pages ? "disabled" : ""} onclick="changePage('${type}', 1)">Siguiente</button>`;
 }
 
-// ── casas ─────────────────────────────────────────────────────────────────────
-
-async function loadCasas() {
-  spin("casas-grid");
-  try {
-    const data = await api("/universo/casas");
-    document.getElementById("casas-grid").innerHTML = data.map(c => `
-      <div class="card">
-        <h3>${c.nombre}</h3>
-        <p>Fundador: ${c.fundador}</p>
-        <p>Mascota: ${c.mascota}</p>
-        <span class="tag">${c.valores?.join(" · ") || ""}</span>
-      </div>`).join("");
-  } catch (e) { document.getElementById("casas-grid").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
+function changePage(type, delta) {
+  loadCategory(type, pageState[type].q, pageState[type].page + delta);
 }
 
-// ── hechizos ──────────────────────────────────────────────────────────────────
+const listText = (title, rows, field = "nombre", extra = "") =>
+  rows?.length ? `<div class="detail-list"><strong>${title}</strong>${rows.map(r => `<span>${r[field]}${extra && r[extra] ? ` — ${r[extra]}` : ""}</span>`).join("")}</div>` : "";
 
-async function loadHechizos(q = "") {
-  spin("hechizos-grid");
-  try {
-    const path = q ? `/universo/hechizos/buscar?q=${encodeURIComponent(q)}` : "/universo/hechizos";
-    const data  = await api(path);
-    document.getElementById("hechizos-grid").innerHTML = data.map(h => `
-      <div class="card">
-        <h3>${h.nombre}</h3>
-        <p>${h.descripcion}</p>
-        <span class="tag">${h.efecto}</span>
-      </div>`).join("");
-  } catch (e) { document.getElementById("hechizos-grid").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
+async function showDetail(type, id) {
+  const item = await api(`/universo/${type}/${id}`).catch(e => { toast(e.message); return null; });
+  if (!item) return;
+  let body = "";
+  if (type === "personajes") body = `
+    <div class="detail-grid"><div><label>Rol</label><span>${item.rol}</span></div><div><label>Alineación</label><span>${item.alineacion}</span></div>
+    <div><label>Casa</label><span>${item.casa?.nombre || "-"}</span></div><div><label>Nacimiento</label><span>${item.fecha_nacimiento?.split("T")[0] || "-"}</span></div></div>
+    ${listText("Hechizos", item.hechizos)}${listText("Eventos", item.eventos, "nombre", "rol_en_evento")}${listText("Películas y libros", item.peliculas_libros, "titulo")}`;
+  else if (type === "casas") body = `<p>Fundador: ${item.fundador}</p><p>Mascota: ${item.mascota}</p>${listText("Valores", (item.valores || []).map(nombre => ({nombre})))}`;
+  else if (type === "hechizos") body = `<p>${item.descripcion}</p><p><strong>Efecto:</strong> ${item.efecto}</p>`;
+  else if (type === "eventos") body = `<p><strong>Fecha:</strong> ${item.fecha?.split("T")[0] || "-"}</p><p>${item.descripcion}</p>${listText("Participantes", item.participantes, "nombre", "rol_en_evento")}${listText("Películas y libros relacionados", item.peliculas_libros, "titulo")}`;
+  else if (type === "peliculas") body = `<p><strong>${item.tipo}</strong> · ${item.anio_lanzamiento}</p><p>${item.descripcion}</p>${listText("Personajes", item.personajes)}${listText("Eventos relacionados", item.eventos)}`;
+  else body = `<p>${item.descripcion}</p><p><strong>Tipo:</strong> ${item.tipo}</p>`;
+  document.getElementById("detail-content").innerHTML = `<h2>${item.nombre || item.titulo}</h2>${body}`;
+  document.getElementById("detail-modal").classList.add("open");
 }
 
-// ── eventos ───────────────────────────────────────────────────────────────────
-
-async function loadEventos() {
-  spin("eventos-table");
-  try {
-    const data = await api("/universo/eventos");
-    document.getElementById("eventos-table").innerHTML = `
-      <table>
-        <thead><tr><th>Nombre</th><th>Fecha</th><th>Descripción</th></tr></thead>
-        <tbody>${data.map(e => `
-          <tr>
-            <td>${e.nombre}</td>
-            <td>${e.fecha ? e.fecha.split("T")[0] : "-"}</td>
-            <td>${e.descripcion}</td>
-          </tr>`).join("")}
-        </tbody>
-      </table>`;
-  } catch (err) { document.getElementById("eventos-table").innerHTML = `<p class="spinner">Error: ${err.message}</p>`; }
-}
-
-// ── peliculas ─────────────────────────────────────────────────────────────────
-
-async function loadPeliculas() {
-  spin("peliculas-grid");
-  try {
-    const data = await api("/universo/peliculas");
-    document.getElementById("peliculas-grid").innerHTML = data.map(p => `
-      <div class="card">
-        <h3>${p.titulo}</h3>
-        <p>${p.descripcion}</p>
-        <span class="tag">${p.tipo} · ${p.anio_lanzamiento}</span>
-      </div>`).join("");
-  } catch (e) { document.getElementById("peliculas-grid").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
-}
-
-// ── objetos ───────────────────────────────────────────────────────────────────
-
-async function loadObjetos() {
-  spin("objetos-grid");
-  try {
-    const data = await api("/universo/objetos");
-    document.getElementById("objetos-grid").innerHTML = data.map(o => `
-      <div class="card">
-        <h3>${o.nombre}</h3>
-        <p>${o.descripcion}</p>
-        <span class="tag">${o.tipo}</span>
-      </div>`).join("");
-  } catch (e) { document.getElementById("objetos-grid").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
-}
+const loadPersonajes = (q, p) => loadCategory("personajes", q, p);
+const loadCasas = (q, p) => loadCategory("casas", q, p);
+const loadHechizos = (q, p) => loadCategory("hechizos", q, p);
+const loadEventos = (q, p) => loadCategory("eventos", q, p);
+const loadPeliculas = (q, p) => loadCategory("peliculas", q, p);
+const loadObjetos = (q, p) => loadCategory("objetos", q, p);
 
 // ── rankings ──────────────────────────────────────────────────────────────────
 
@@ -250,9 +210,9 @@ async function loadRankings() {
     const el   = document.getElementById("rankings-global");
     if (!data.length) { el.innerHTML = '<p class="spinner">Sin datos hoy aún. Explorá el contenido primero.</p>'; return; }
     el.innerHTML = data.map((r, i) => `
-      <div class="rank-item">
+      <div class="rank-item clickable" onclick="showDetail('${r.contenido_tipo}', '${r.contenido_id}')">
         <span class="rank-num">#${i+1}</span>
-        <span>${r.contenido_id}</span>
+        <span>${r.contenido_nombre}<small>${r.contenido_tipo}</small></span>
         <span class="rank-score">${r.visitas} visita${r.visitas !== 1 ? "s" : ""}</span>
       </div>`).join("");
   } catch (e) { document.getElementById("rankings-global").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
@@ -262,9 +222,9 @@ async function loadRankings() {
     if (uid) {
       const data2 = await api(`/rankings/usuario/${uid}`).catch(() => []);
       document.getElementById("rankings-usuario").innerHTML = data2.map((r, i) => `
-        <div class="rank-item">
+        <div class="rank-item clickable" onclick="showDetail('${r.contenido_tipo}', '${r.contenido_id}')">
           <span class="rank-num">#${i+1}</span>
-          <span>${r.contenido_id}</span>
+          <span>${r.contenido_nombre}<small>${r.contenido_tipo}</small></span>
           <span class="rank-score">${r.visitas} visita${r.visitas !== 1 ? "s" : ""}</span>
         </div>`).join("") || '<p class="spinner">Sin actividad personal</p>';
     }
@@ -316,7 +276,7 @@ async function globalSearch() {
     const rows = await api(`/universo/buscar?q=${encodeURIComponent(q)}`);
     document.getElementById("global-results").innerHTML = rows.length ? rows.map(r => {
       const c = r.contenido;
-      return `<div class="card"><h3>${c.nombre || c.titulo}</h3><p>${c.descripcion || c.rol || ""}</p><span class="tag">${r.tipo}</span></div>`;
+      return `<div class="card" onclick="showDetail('${r.tipo}', '${c._id}')"><h3>${c.nombre || c.titulo}</h3><p>${c.descripcion || c.rol || ""}</p><span class="tag">${r.tipo}</span></div>`;
     }).join("") : '<p class="spinner">Sin resultados</p>';
   } catch (e) { document.getElementById("global-results").innerHTML = `<p class="spinner">Error: ${e.message}</p>`; }
 }
@@ -453,6 +413,8 @@ function renderRelationOptions() {
   document.getElementById("relation-movie-character").innerHTML = chars;
   document.getElementById("relation-event-target").innerHTML = optionsFor(adminStore.eventos || [], "nombre");
   document.getElementById("relation-movie-target").innerHTML = optionsFor(adminStore.peliculas || [], "titulo");
+  document.getElementById("relation-work-target").innerHTML = optionsFor(adminStore.peliculas || [], "titulo");
+  document.getElementById("relation-work-event").innerHTML = optionsFor(adminStore.eventos || [], "nombre");
 }
 
 async function changeRelation(kind, remove = false) {
@@ -468,6 +430,20 @@ async function changeRelation(kind, remove = false) {
     await api(`/universo/asociaciones/${kind}`, { method: "POST", body: JSON.stringify(body) });
   }
   toast(remove ? "Relación eliminada" : "Relación agregada"); await loadAdminPanel();
+}
+
+async function changeWorkEventRelation(remove = false) {
+  const pelicula_id = document.getElementById("relation-work-target").value;
+  const evento_id = document.getElementById("relation-work-event").value;
+  if (remove) {
+    await api(`/universo/asociaciones/peliculas-eventos?pelicula_id=${pelicula_id}&evento_id=${evento_id}`, { method: "DELETE" });
+  } else {
+    await api("/universo/asociaciones/peliculas-eventos", {
+      method: "POST", body: JSON.stringify({ pelicula_id, evento_id }),
+    });
+  }
+  toast(remove ? "Relación eliminada" : "Relación agregada");
+  await loadAdminPanel();
 }
 
 function renderUsersAndRoles() {
@@ -577,16 +553,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     catch (err) { document.getElementById("modal-error").textContent = err.message; }
   });
 
-  // search personajes
-  document.getElementById("search-personajes").addEventListener("input", e => {
-    clearTimeout(window._st);
-    window._st = setTimeout(() => loadPersonajes(e.target.value), 350);
-  });
-
-  // search hechizos
-  document.getElementById("search-hechizos").addEventListener("input", e => {
-    clearTimeout(window._sh);
-    window._sh = setTimeout(() => loadHechizos(e.target.value), 350);
+  ["personajes", "casas", "hechizos", "eventos", "peliculas", "objetos"].forEach(type => {
+    document.getElementById(`search-${type}`).addEventListener("input", e => {
+      clearTimeout(window[`search_${type}`]);
+      window[`search_${type}`] = setTimeout(() => loadCategory(type, e.target.value, 1), 350);
+    });
   });
 
   // filter actividad por fecha
@@ -623,6 +594,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("relation-event-remove").addEventListener("click", () => changeRelation("eventos", true).catch(e => toast(e.message)));
   document.getElementById("relation-movie-add").addEventListener("click", () => changeRelation("peliculas").catch(e => toast(e.message)));
   document.getElementById("relation-movie-remove").addEventListener("click", () => changeRelation("peliculas", true).catch(e => toast(e.message)));
+  document.getElementById("relation-work-add").addEventListener("click", () => changeWorkEventRelation().catch(e => toast(e.message)));
+  document.getElementById("relation-work-remove").addEventListener("click", () => changeWorkEventRelation(true).catch(e => toast(e.message)));
   document.getElementById("role-save").addEventListener("click", () => saveFriendlyRole().catch(e => toast(e.message)));
   document.getElementById("role-clear").addEventListener("click", clearFriendlyRole);
+  document.getElementById("detail-close").addEventListener("click", () => document.getElementById("detail-modal").classList.remove("open"));
+  document.getElementById("detail-modal").addEventListener("click", e => {
+    if (e.target.id === "detail-modal") e.target.classList.remove("open");
+  });
 });

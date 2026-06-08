@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from datetime import datetime
+from bson import ObjectId
 from passlib.context import CryptContext
 from db.supabase_client import get_supabase
 from db.mongo_client import get_mongo
@@ -144,6 +145,7 @@ def seed_mongo():
         {"titulo":"Harry Potter y las Reliquias de la Muerte Parte 1","tipo":"pelicula","anio_lanzamiento":2010,"descripcion":"Primera parte de la adaptación final."},
         {"titulo":"Harry Potter y las Reliquias de la Muerte Parte 2","tipo":"pelicula","anio_lanzamiento":2011,"descripcion":"La batalla definitiva de Hogwarts."},
     ]).inserted_ids
+    db.peliculas_libros.update_many({}, {"$set": {"personajes": [], "eventos": []}})
     print(f"  + {len(peliculas_ids)} películas/libros")
 
     # --- OBJETOS MÁGICOS ---
@@ -164,23 +166,23 @@ def seed_mongo():
         {"nombre":"Batalla de Hogwarts",
          "fecha":datetime(1998,5,2),
          "descripcion":"Batalla final entre las fuerzas de Voldemort y los defensores de Hogwarts.",
-         "participantes":[]},
+         "participantes":[],"peliculas_libros":[]},
         {"nombre":"Torneo de los Tres Magos",
          "fecha":datetime(1994,9,1),
          "descripcion":"Competencia mágica internacional celebrada en Hogwarts.",
-         "participantes":[]},
+         "participantes":[],"peliculas_libros":[]},
         {"nombre":"Primera Caída de Voldemort",
          "fecha":datetime(1981,10,31),
          "descripcion":"Voldemort intenta matar a Harry de bebé y pierde sus poderes.",
-         "participantes":[]},
+         "participantes":[],"peliculas_libros":[]},
         {"nombre":"Fundación de Hogwarts",
          "fecha":datetime(993,9,1),
          "descripcion":"Los cuatro grandes magos fundan la escuela de magia.",
-         "participantes":[]},
+         "participantes":[],"peliculas_libros":[]},
         {"nombre":"Batalla del Departamento de Misterios",
          "fecha":datetime(1996,6,18),
          "descripcion":"El Ejército de Dumbledore se enfrenta a los mortífagos.",
-         "participantes":[]},
+         "participantes":[],"peliculas_libros":[]},
     ])
     eventos_ids = eventos_result.inserted_ids
     print(f"  + {len(eventos_ids)} eventos")
@@ -307,7 +309,44 @@ def seed_mongo():
             "eventos":[{"evento_id":str(eventos_ids[1]),"nombre":"Torneo de los Tres Magos","rol_en_evento":"Campeón de Hufflepuff"}],
         },
     ]
-    db.personajes.insert_many(personajes)
+    personajes_ids = db.personajes.insert_many(personajes).inserted_ids
+
+    # Completa las referencias inversas para mantener relaciones bidireccionales.
+    for personaje_id, personaje in zip(personajes_ids, personajes):
+        for evento in personaje["eventos"]:
+            db.eventos.update_one(
+                {"_id": ObjectId(evento["evento_id"])},
+                {"$addToSet": {"participantes": {
+                    "personaje_id": str(personaje_id),
+                    "nombre": personaje["nombre"],
+                    "rol_en_evento": evento["rol_en_evento"],
+                }}},
+            )
+        for obra in personaje["peliculas_libros"]:
+            pelicula = db.peliculas_libros.find_one({"_id": ObjectId(obra["id"])})
+            if pelicula:
+                db.personajes.update_one(
+                    {"_id": personaje_id, "peliculas_libros.id": obra["id"]},
+                    {"$set": {"peliculas_libros.$.titulo": pelicula["titulo"]}},
+                )
+                db.peliculas_libros.update_one(
+                    {"_id": pelicula["_id"]},
+                    {"$addToSet": {"personajes": {"id": str(personaje_id), "nombre": personaje["nombre"]}}},
+                )
+
+    # Ejemplo de relación película/libro-evento: El Cáliz de Fuego y el Torneo.
+    for pelicula_id in peliculas_ids[6:8]:
+        pelicula = db.peliculas_libros.find_one({"_id": pelicula_id})
+        db.peliculas_libros.update_one(
+            {"_id": pelicula_id},
+            {"$addToSet": {"eventos": {"id": str(eventos_ids[1]), "nombre": "Torneo de los Tres Magos"}}},
+        )
+        db.eventos.update_one(
+            {"_id": eventos_ids[1]},
+            {"$addToSet": {"peliculas_libros": {
+                "id": str(pelicula_id), "titulo": pelicula["titulo"], "tipo": pelicula["tipo"],
+            }}},
+        )
     print(f"  + {len(personajes)} personajes")
     print("[MongoDB] OK")
 

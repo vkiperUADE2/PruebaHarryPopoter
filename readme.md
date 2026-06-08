@@ -181,3 +181,25 @@ escalabilidad se encuentra en [REQUISITOS.md](REQUISITOS.md).
 Al iniciar sesion con `admin@hogwarts.com`, la interfaz muestra la seccion
 **Administrar**, desde donde se puede gestionar contenido, asociaciones, roles
 y usuarios. Todas esas operaciones tambien estan documentadas en `/docs`.
+
+Todas las categorias disponen de buscador, detalle y paginacion. El panel
+administrativo permite relacionar personajes con eventos y obras, y tambien
+relacionar peliculas/libros con eventos.
+
+Para ejecutar la verificacion automatizada:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Para auditar referencias bidireccionales de MongoDB:
+
+```bash
+python backend/seed/audit_consistency.py
+```
+
+Para ejecutar una prueba de carga local reproducible:
+
+```bash
+python scripts/load_test.py --requests 100 --concurrency 10
+```
