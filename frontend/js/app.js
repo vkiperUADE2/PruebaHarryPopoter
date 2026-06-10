@@ -245,6 +245,7 @@ async function loadActividad() {
   spin("actividad-content");
   try {
     const rows = await api(`/actividad/usuario/${uid}`);
+    rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     document.getElementById("actividad-content").innerHTML = rows.length ? `
       <table>
         <thead><tr><th>Tipo</th><th>Contenido</th><th>Categoría</th><th>Fecha</th></tr></thead>
