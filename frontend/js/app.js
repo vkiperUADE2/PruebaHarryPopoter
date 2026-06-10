@@ -449,12 +449,14 @@ async function changeWorkEventRelation(remove = false) {
 }
 
 function renderUsersAndRoles() {
+  const q = (document.getElementById("search-admin-users")?.value || "").toLowerCase();
+  const filtered = adminUsers.filter(u => u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
   const roleOptions = selected => adminRoles.map(r => `<option value="${r.id}" ${r.id === selected ? "selected" : ""}>${r.nombre}</option>`).join("");
-  document.getElementById("admin-users-list").innerHTML = adminUsers.map(u => `
+  document.getElementById("admin-users-list").innerHTML = filtered.length ? filtered.map(u => `
     <div class="admin-user-card"><strong>${u.nombre}</strong><small>${u.email}</small>
     <label>Tipo de usuario</label><select id="user-role-${u.id}">${roleOptions(u.rol_id)}</select>
     <label>Estado</label><select id="user-active-${u.id}"><option value="true" ${u.activo ? "selected" : ""}>Activo</option><option value="false" ${!u.activo ? "selected" : ""}>Inactivo</option></select>
-    <button class="btn" onclick="saveFriendlyUser(${u.id})">Guardar cambios</button></div>`).join("");
+    <button class="btn" onclick="saveFriendlyUser(${u.id})">Guardar cambios</button></div>`).join("") : '<p class="spinner">Sin resultados</p>';
   document.getElementById("admin-roles-list").innerHTML = adminRoles.map((r, i) => `
     <div class="admin-list-row"><div><strong>${r.nombre}</strong><small>${r.descripcion || ""}</small></div>
     <div class="row-actions"><button class="btn btn-outline" onclick="editFriendlyRole(${i})">Editar</button>
@@ -586,10 +588,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btn-search-global").addEventListener("click", globalSearch);
   document.getElementById("search-global").addEventListener("keydown", e => { if (e.key === "Enter") globalSearch(); });
   document.querySelectorAll(".admin-tab").forEach(tab => tab.addEventListener("click", () => {
-    document.querySelectorAll(".admin-tab").forEach(t => t.classList.toggle("active", t === tab));
+    document.querySelectorAll(".admin-tab").forEach(t => {
+      t.classList.toggle("active", t === tab);
+      t.classList.toggle("btn-outline", t !== tab);
+    });
     document.querySelectorAll(".admin-view").forEach(v => v.classList.toggle("active", v.id === tab.dataset.adminView));
   }));
   document.getElementById("admin-category").addEventListener("change", () => { renderAdminForm(); renderAdminItems(); });
+  document.getElementById("search-admin-users").addEventListener("input", renderUsersAndRoles);
   document.getElementById("admin-new-item").addEventListener("click", () => renderAdminForm());
   document.getElementById("admin-cancel-edit").addEventListener("click", () => renderAdminForm());
   document.getElementById("admin-save-item").addEventListener("click", () => saveAdminItem().catch(e => toast(e.message)));
