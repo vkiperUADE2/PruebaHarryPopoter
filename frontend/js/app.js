@@ -258,6 +258,7 @@ async function loadActividad() {
         </tbody>
       </table>` : '<p class="spinner">Sin actividad registrada.</p>';
     const searches = await api(`/actividad/busquedas/${uid}`).catch(() => []);
+    searches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     document.getElementById("busquedas-content").innerHTML = searches.length
       ? `<table><thead><tr><th>Texto</th><th>Resultados</th><th>Fecha</th></tr></thead><tbody>${searches.map(s =>
           `<tr><td>${s.texto_busqueda}</td><td>${s.cantidad_resultados}</td><td>${new Date(s.created_at).toLocaleString()}</td></tr>`
@@ -554,10 +555,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   ["personajes", "casas", "hechizos", "eventos", "peliculas", "objetos"].forEach(type => {
-    document.getElementById(`search-${type}`).addEventListener("input", e => {
-      clearTimeout(window[`search_${type}`]);
-      window[`search_${type}`] = setTimeout(() => loadCategory(type, e.target.value, 1), 350);
-    });
+    const input = document.getElementById(`search-${type}`);
+    const btn = document.getElementById(`btn-search-${type}`);
+    const doSearch = () => loadCategory(type, input.value, 1);
+    btn.addEventListener("click", doSearch);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
   });
 
   // filter actividad por fecha
