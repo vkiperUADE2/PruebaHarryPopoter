@@ -7,7 +7,7 @@
 |---|---|
 | 1109642 | Souto Luciana Belén |
 | 1200742 | Kiper Valentín |
-| 1163632 | Alvarez Kraus Gabriel |
+| 1153632 | Alvarez Kraus Gabriel |
 | 1172868 | Agustín Viñas |
 
 **Entrega:** 10 de junio de 2026
