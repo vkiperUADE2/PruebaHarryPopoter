@@ -1,21 +1,6 @@
-"""
-seed_all.py — Script de carga inicial de datos (seed)
-
-Pobla las 4 bases de datos con datos de prueba del universo Harry Potter.
-Debe ejecutarse UNA VEZ antes de iniciar el servidor, desde la carpeta backend/:
-
-    python seed/seed_all.py
-
-Orden de ejecución:
-    1. Supabase  → roles y usuarios de prueba
-    2. MongoDB   → personajes, casas, hechizos, eventos, películas, objetos
-    3. Cassandra → verifica la conexión y crea las colecciones si no existen
-    4. Redis     → verifica que la conexión esté activa
-"""
 import sys
 from pathlib import Path
 
-# Agrega la carpeta backend al path para poder importar los módulos db/
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from datetime import datetime
@@ -26,41 +11,30 @@ from db.mongo_client import get_mongo
 from db.redis_client import get_redis
 from db.cassandra_client import get_cassandra
 
-# Contexto para hashear contraseñas con bcrypt (mismo que usa auth.py)
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-# ── 1. SUPABASE ───────────────────────────────────────────────────────────────
-
 def seed_supabase():
-    """
-    Inserta los roles base y los usuarios de prueba en Supabase (PostgreSQL).
-    Usa upsert para roles (no duplica si ya existen).
-    Para usuarios verifica si el email ya existe antes de insertar.
-    """
     print("\n[Supabase] Insertando roles y usuarios...")
     sb = get_supabase()
 
-    # Upsert: inserta o actualiza los roles base del sistema
     sb.table("roles").upsert([
         {"id": 1, "nombre": "USUARIO",        "descripcion": "Usuario estándar"},
         {"id": 2, "nombre": "ADMINISTRADOR",   "descripcion": "Acceso total"},
     ]).execute()
 
-    # Lista de usuarios de prueba para la demo
     usuarios = [
         {"nombre": "Admin Hogwarts",  "email": "admin@hogwarts.com",    "password": "admin123",    "rol_id": 2},
         {"nombre": "Harry Potter",    "email": "harry@hogwarts.com",    "password": "expecto123",  "rol_id": 1},
         {"nombre": "Hermione Granger","email": "hermione@hogwarts.com", "password": "alohomora1",  "rol_id": 1},
     ]
     for u in usuarios:
-        # Verifica si el email ya está registrado para evitar duplicados
         existing = sb.table("usuarios").select("id").eq("email", u["email"]).execute()
         if not existing.data:
             sb.table("usuarios").insert({
                 "nombre":        u["nombre"],
                 "email":         u["email"],
-                "password_hash": pwd.hash(u["password"]),  # nunca se guarda la contraseña en texto plano
+                "password_hash": pwd.hash(u["password"]),
                 "rol_id":        u["rol_id"],
                 "activo":        True,
             }).execute()
@@ -70,15 +44,7 @@ def seed_supabase():
     print("[Supabase] OK")
 
 
-# ── 2. MONGODB ────────────────────────────────────────────────────────────────
-
 def seed_mongo():
-    """
-    Pobla las 6 colecciones de MongoDB con datos del universo Harry Potter.
-    Primero limpia las colecciones para evitar duplicados al correr el seed varias veces.
-    El orden importa: primero se insertan casas y hechizos para obtener sus IDs,
-    que luego se usan como referencias embebidas dentro de los personajes.
-    """
     print("\n[MongoDB] Insertando colecciones...")
     db = get_mongo()
     db.personajes.create_index("nombre")
@@ -88,12 +54,9 @@ def seed_mongo():
     db.peliculas_libros.create_index("titulo")
     db.objetos_magicos.create_index("nombre")
 
-    # Limpia todas las colecciones antes de volver a insertar
     for col in ["casas","hechizos","peliculas_libros","objetos_magicos","eventos","personajes"]:
         db[col].delete_many({})
 
-    # --- CASAS ---
-    # insert_many devuelve los ObjectIds generados automáticamente por MongoDB
     casas_ids = db.casas.insert_many([
         {"nombre":"Gryffindor","fundador":"Godric Gryffindor","mascota":"León",
          "valores":["valentía","coraje","caballerosidad","determinación"]},
@@ -105,7 +68,6 @@ def seed_mongo():
          "valores":["lealtad","paciencia","trabajo duro","justicia"]},
     ]).inserted_ids
 
-    # Mapa auxiliar para referenciar los IDs de casas por nombre al insertar personajes
     casa_map = {
         "Gryffindor": casas_ids[0],
         "Slytherin":  casas_ids[1],
@@ -114,7 +76,6 @@ def seed_mongo():
     }
     print(f"  + {len(casas_ids)} casas")
 
-    # --- HECHIZOS ---
     hechizos_ids = db.hechizos.insert_many([
         {"nombre":"Expelliarmus",      "descripcion":"Hechizo desarmador",        "efecto":"Desarma al oponente"},
         {"nombre":"Wingardium Leviosa","descripcion":"Hechizo de levitación",     "efecto":"Hace flotar objetos"},
@@ -129,7 +90,6 @@ def seed_mongo():
     ]).inserted_ids
     print(f"  + {len(hechizos_ids)} hechizos")
 
-    # --- PELÍCULAS Y LIBROS ---
     peliculas_ids = db.peliculas_libros.insert_many([
         {"titulo":"Harry Potter y la Piedra Filosofal",        "tipo":"libro",    "anio_lanzamiento":1997,"descripcion":"El inicio de la aventura mágica de Harry."},
         {"titulo":"Harry Potter y la Piedra Filosofal",        "tipo":"pelicula", "anio_lanzamiento":2001,"descripcion":"Adaptación cinematográfica del primer libro."},
@@ -148,7 +108,6 @@ def seed_mongo():
     db.peliculas_libros.update_many({}, {"$set": {"personajes": [], "eventos": []}})
     print(f"  + {len(peliculas_ids)} películas/libros")
 
-    # --- OBJETOS MÁGICOS ---
     db.objetos_magicos.insert_many([
         {"nombre":"Varita del Saúco",           "descripcion":"La varita más poderosa del mundo mágico.","tipo":"artefacto"},
         {"nombre":"Piedra de la Resurrección",  "descripcion":"Una de las Reliquias de la Muerte.","tipo":"reliquia"},
@@ -161,7 +120,6 @@ def seed_mongo():
     ])
     print("  + 8 objetos mágicos")
 
-    # --- EVENTOS ---
     eventos_result = db.eventos.insert_many([
         {"nombre":"Batalla de Hogwarts",
          "fecha":datetime(1998,5,2),
@@ -187,17 +145,12 @@ def seed_mongo():
     eventos_ids = eventos_result.inserted_ids
     print(f"  + {len(eventos_ids)} eventos")
 
-    # --- PERSONAJES ---
-    # Los personajes usan subdocumentos embebidos para la casa, hechizos y eventos.
-    # Los IDs de casa y hechizos se convierten a string para guardarlos como referencia.
-    # Este patrón de desnormalización evita JOINs y acelera las consultas de lectura.
     personajes = [
         {
             "nombre":"Harry Potter",
             "fecha_nacimiento":datetime(1980,7,31),
             "rol":"Protagonista",
             "alineacion":"Bien",
-            # La casa se embebe como subdocumento (id + nombre) para no necesitar otra consulta
             "casa":{"id":str(casa_map["Gryffindor"]),"nombre":"Gryffindor"},
             "peliculas_libros":[{"id":str(i),"titulo":"HP"} for i in peliculas_ids[:4]],
             "hechizos":[
@@ -311,7 +264,6 @@ def seed_mongo():
     ]
     personajes_ids = db.personajes.insert_many(personajes).inserted_ids
 
-    # Completa las referencias inversas para mantener relaciones bidireccionales.
     for personaje_id, personaje in zip(personajes_ids, personajes):
         for evento in personaje["eventos"]:
             db.eventos.update_one(
@@ -334,7 +286,6 @@ def seed_mongo():
                     {"$addToSet": {"personajes": {"id": str(personaje_id), "nombre": personaje["nombre"]}}},
                 )
 
-    # Ejemplo de relación película/libro-evento: El Cáliz de Fuego y el Torneo.
     for pelicula_id in peliculas_ids[6:8]:
         pelicula = db.peliculas_libros.find_one({"_id": pelicula_id})
         db.peliculas_libros.update_one(
@@ -351,47 +302,30 @@ def seed_mongo():
     print("[MongoDB] OK")
 
 
-# ── 3. CASSANDRA (ASTRA DB) ───────────────────────────────────────────────────
-
 def seed_cassandra():
-    """
-    Inicializa la conexión con Astra DB y crea las colecciones de auditoría
-    si todavía no existen. La lógica de creación está en get_cassandra().
-    """
     print("\n[Cassandra] Inicializando keyspace y tablas...")
     try:
-        get_cassandra()  # la primera llamada crea las colecciones automáticamente
+        get_cassandra()
         print("[Cassandra] OK — keyspace y tablas creados")
     except Exception as e:
         print(f"[Cassandra] ERROR: {e}")
 
 
-# ── 4. REDIS ──────────────────────────────────────────────────────────────────
-
 def seed_redis():
-    """
-    Verifica que Redis esté accesible enviando un PING.
-    Redis no necesita datos iniciales ya que los rankings y sesiones
-    se crean dinámicamente cuando los usuarios interactúan con el sistema.
-    """
     print("\n[Redis] Probando conexión...")
     try:
         r = get_redis()
-        r.ping()  # comando PING de Redis: devuelve "PONG" si la conexión es exitosa
+        r.ping()
         print("[Redis] OK")
     except Exception as e:
         print(f"[Redis] ERROR: {e}")
 
-
-# ── PUNTO DE ENTRADA ──────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     print("=" * 50)
     print("  SEED — Harry Potter Polyglot DB")
     print("=" * 50)
 
-    # Cada función se envuelve en try/except para que un error en una base
-    # no interrumpa la carga de las demás
     try:
         seed_supabase()
     except Exception as e:

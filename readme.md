@@ -1,7 +1,15 @@
 # Harry Potter — Sistema de Bases de Datos Poliglotas
 
 **Materia:** Ingeniería de Datos II — UADE  
-**Grupo 8** | Souto Luciana Belén  
+**Grupo 5**
+
+| Legajo | Integrante |
+|---|---|
+| 1109642 | Souto Luciana Belén |
+| 1200742 | Kiper Valentín |
+| 1163632 | Alvarez Kraus Gabriel |
+| 1172868 | Agustín Viñas |
+
 **Entrega:** 10 de junio de 2026
 
 ---
@@ -126,19 +134,47 @@ python -m uvicorn main:app --reload --port 8000
 | POST | `/auth/login` | Inicia sesión, devuelve token |
 | POST | `/auth/logout` | Cierra sesión |
 | GET | `/auth/me` | Devuelve datos del usuario logueado |
+| GET | `/auth/usuarios` | Lista todos los usuarios (solo admin) RF3 |
+| PUT | `/auth/usuarios/{id}/rol` | Cambia el rol de un usuario (solo admin) RF3 |
 
 ### Universo HP (MongoDB)
 | Método | URL | Descripción |
 |---|---|---|
 | GET | `/universo/personajes` | Lista todos los personajes |
-| GET | `/universo/personajes/{id}` | Detalle de un personaje |
 | GET | `/universo/personajes/buscar?q=harry` | Busca personajes por nombre |
+| GET | `/universo/personajes/{id}` | Detalle de un personaje |
+| POST | `/universo/personajes` | Crea un personaje (admin) RF20 |
+| PUT | `/universo/personajes/{id}` | Modifica un personaje (admin) RF20 |
+| DELETE | `/universo/personajes/{id}` | Elimina un personaje (admin) RF20 |
+| POST | `/universo/personajes/{id}/eventos` | Asocia personaje con evento (admin) RF17 |
+| DELETE | `/universo/personajes/{id}/eventos/{eid}` | Desasocia del evento (admin) RF17 |
+| POST | `/universo/personajes/{id}/peliculas` | Asocia personaje con película (admin) RF18 |
+| DELETE | `/universo/personajes/{id}/peliculas/{pid}` | Desasocia de la película (admin) RF18 |
 | GET | `/universo/casas` | Lista las casas de Hogwarts |
+| GET | `/universo/casas/buscar?q=gryffindor` | Busca casas por nombre o fundador RF19 |
+| POST | `/universo/casas` | Crea una casa (admin) RF20 |
+| PUT | `/universo/casas/{id}` | Modifica una casa (admin) RF20 |
+| DELETE | `/universo/casas/{id}` | Elimina una casa (admin) RF20 |
 | GET | `/universo/hechizos` | Lista los hechizos |
 | GET | `/universo/hechizos/buscar?q=expecto` | Busca hechizos por nombre o efecto |
+| POST | `/universo/hechizos` | Crea un hechizo (admin) RF20 |
+| PUT | `/universo/hechizos/{id}` | Modifica un hechizo (admin) RF20 |
+| DELETE | `/universo/hechizos/{id}` | Elimina un hechizo (admin) RF20 |
 | GET | `/universo/eventos` | Lista los eventos históricos |
+| GET | `/universo/eventos/buscar?q=batalla` | Busca eventos por nombre o descripción RF19 |
+| POST | `/universo/eventos` | Crea un evento (admin) RF20 |
+| PUT | `/universo/eventos/{id}` | Modifica un evento (admin) RF20 |
+| DELETE | `/universo/eventos/{id}` | Elimina un evento (admin) RF20 |
 | GET | `/universo/peliculas` | Lista películas y libros |
+| GET | `/universo/peliculas/buscar?q=piedra` | Busca películas por título o descripción RF19 |
+| POST | `/universo/peliculas` | Crea una película (admin) RF20 |
+| PUT | `/universo/peliculas/{id}` | Modifica una película (admin) RF20 |
+| DELETE | `/universo/peliculas/{id}` | Elimina una película (admin) RF20 |
 | GET | `/universo/objetos` | Lista los objetos mágicos |
+| GET | `/universo/objetos/buscar?q=varita` | Busca objetos por nombre, descripción o tipo RF19 |
+| POST | `/universo/objetos` | Crea un objeto (admin) RF20 |
+| PUT | `/universo/objetos/{id}` | Modifica un objeto (admin) RF20 |
+| DELETE | `/universo/objetos/{id}` | Elimina un objeto (admin) RF20 |
 
 ### Actividad (Cassandra / Astra DB)
 | Método | URL | Descripción |
@@ -170,36 +206,3 @@ Cada vez que un usuario logueado visita un detalle (personaje, hechizo, etc.):
 2. Se inserta un registro en **Cassandra** → para el historial de actividad
 
 Estas dos operaciones se ejecutan en **segundo plano** (BackgroundTasks de FastAPI) para no demorar la respuesta al usuario.
-
----
-
-## Cumplimiento y administracion
-
-La matriz de cumplimiento, decisiones de consistencia, seguridad y
-escalabilidad se encuentra en [REQUISITOS.md](REQUISITOS.md).
-
-Al iniciar sesion con `admin@hogwarts.com`, la interfaz muestra la seccion
-**Administrar**, desde donde se puede gestionar contenido, asociaciones, roles
-y usuarios. Todas esas operaciones tambien estan documentadas en `/docs`.
-
-Todas las categorias disponen de buscador, detalle y paginacion. El panel
-administrativo permite relacionar personajes con eventos y obras, y tambien
-relacionar peliculas/libros con eventos.
-
-Para ejecutar la verificacion automatizada:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-Para auditar referencias bidireccionales de MongoDB:
-
-```bash
-python backend/seed/audit_consistency.py
-```
-
-Para ejecutar una prueba de carga local reproducible:
-
-```bash
-python scripts/load_test.py --requests 100 --concurrency 10
-```
